@@ -15,4 +15,9 @@
     <applicationListeners>
         <listener class="com.github.chaoswarzh.intellijtaie.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
+    <actions>
+        <action id="Test" class="com.github.chaoswarzh.intellijtaie.actions.EgAction" text="test run tai-e">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+        </action>
+    </actions>
 </idea-plugin>

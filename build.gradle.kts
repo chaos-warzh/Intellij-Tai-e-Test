@@ -5,6 +5,7 @@ fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
 
 plugins {
+    application
     id("java") // Java support
     alias(libs.plugins.kotlin) // Kotlin support
     alias(libs.plugins.gradleIntelliJPlugin) // Gradle IntelliJ Plugin
@@ -24,6 +25,32 @@ repositories {
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog
 dependencies {
 //    implementation(libs.exampleLibrary)
+
+    // Process options
+    implementation("info.picocli:picocli:4.7.3")
+    // Logger
+    implementation("org.apache.logging.log4j:log4j-api:2.20.0")
+    implementation("org.apache.logging.log4j:log4j-core:2.20.0")
+    // Process YAML configuration files
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.0")
+    // Use Soot as frontend
+    implementation(files("lib/sootclasses-modified.jar"))
+    "org.soot-oss:soot:4.4.1".let {
+        // Disable transitive dependencies from Soot in compile classpath
+        compileOnly(it) { isTransitive = false }
+        testCompileOnly(it) { isTransitive = false }
+        runtimeOnly(it)
+    }
+    // Use ASM to read Java class files
+    implementation("org.ow2.asm:asm:9.4")
+    // Eliminate SLF4J warning
+    implementation("org.slf4j:slf4j-nop:2.0.7")
+    // JSR305, for javax.annotation
+    implementation("com.google.code.findbugs:jsr305:3.0.2")
+
+    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.junit.platform:junit-platform-suite")
 }
 
 // Set the JVM language level used to build the project.
@@ -56,6 +83,10 @@ kover {
             }
         }
     }
+}
+
+application {
+    mainClass.set("com.github.chaoswarzh.intellijtaie.Main")
 }
 
 tasks {
@@ -118,4 +149,34 @@ tasks {
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
         channels = properties("pluginVersion").map { listOf(it.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }) }
     }
+
+    withType<Test> {
+        useJUnitPlatform()
+        maxHeapSize = "2G"
+        maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).takeIf { it > 0 } ?: 1
+
+        val test by testing.suites.existing(JvmTestSuite::class)
+        testClassesDirs = files(test.map { it.sources.output.classesDirs })
+        classpath = files(test.map { it.sources.runtimeClasspath })
+    }
+
+    test {
+        filter {
+            excludeTestsMatching("*TestSuite")
+        }
+    }
+
+    task("testTaieTestSuite", type = Test::class) {
+        group = "verification"
+        description = "Runs the Tai-e test suite"
+        filter {
+            includeTestsMatching("TaieTestSuite")
+        }
+    }
+}
+
+// Automatically agree the Gradle ToS when running gradle with '--scan' option
+extensions.findByName("buildScan")?.withGroovyBuilder {
+    setProperty("termsOfServiceUrl", "https://gradle.com/terms-of-service")
+    setProperty("termsOfServiceAgree", "yes")
 }
