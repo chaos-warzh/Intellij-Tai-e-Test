@@ -35,7 +35,7 @@ dependencies {
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.0")
     // Use Soot as frontend
     implementation(files("lib/sootclasses-modified.jar"))
-    "org.soot-oss:soot:4.4.1".let {
+    "org.soot-oss:soot:4.5.0".let {
         // Disable transitive dependencies from Soot in compile classpath
         compileOnly(it) { isTransitive = false }
         testCompileOnly(it) { isTransitive = false }
